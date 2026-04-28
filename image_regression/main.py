@@ -2,10 +2,10 @@
 =============================================================
   Image Feature-Based Prediction using Linear Regression
 =============================================================
-  Author  : B.Tech CS Student Project
+  Author   : Vidyanand Yadav & Ayush Maurya
   Libraries: NumPy, Pandas, Matplotlib, OpenCV, Scikit-learn
-  Purpose : Extract image features and predict a target value
-            (simulated "price") using Linear Regression.
+  Purpose  : Extract image features and predict a target value
+             (simulated "price") using Linear Regression.
 =============================================================
 """
 
@@ -28,7 +28,7 @@ def load_images(folder_path):
     images = []
 
     if not os.path.exists(folder_path):
-        print(f"[ERROR] Folder '{folder_path}' not found. Please create it and add images.")
+        print(f"[ERROR] Folder '{folder_path}' not found. Please run generate_sample_images.py first.")
         return images
 
     for filename in os.listdir(folder_path):
@@ -67,9 +67,9 @@ def extract_features(images):
         edge_count = np.sum(edges_img > 0)  # count non-zero (edge) pixels
 
         records.append({
-            'filename' : filename,
+            'filename'  : filename,
             'brightness': round(brightness, 4),
-            'edges'    : edge_count
+            'edges'     : edge_count
         })
 
     df = pd.DataFrame(records)
@@ -81,12 +81,14 @@ def extract_features(images):
 # ─────────────────────────────────────────────
 def create_target(df):
     """
-    Simulate a target variable 'price' using a simple formula:
+    Simulate a target variable 'price' using a weighted formula:
         price = brightness * 0.5 + edges * 0.01
-    This represents how image characteristics could map to a value.
+    Noise is added to simulate real-world unpredictability.
     """
     df['price'] = (df['brightness'] * 0.5) + (df['edges'] * 0.01)
-    df['price'] = df['price'].round(4)
+    np.random.seed(42)
+    noise = np.random.normal(0, 5, size=len(df))
+    df['price'] = (df['price'] + noise).round(4)
     return df
 
 
@@ -99,30 +101,22 @@ def train_model(df):
     and price as the target variable.
     Returns the trained model, test sets, and predictions.
     """
-    X = df[['brightness', 'edges']].values   # Feature matrix
-    y = df['price'].values                   # Target vector
+    X = df[['brightness', 'edges']].values
+    y = df['price'].values
 
-    # Split into training and testing sets (80% train, 20% test)
-    # If dataset is very small, use all data for training
-    if len(df) < 5:
-        X_train, X_test, y_train, y_test = X, X, y, y
-        print("[INFO] Small dataset detected — using all data for training and testing.")
-    else:
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42
-        )
+    # Split into training (80%) and testing (20%) sets
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
 
-    # Initialize and train the Linear Regression model
     model = LinearRegression()
     model.fit(X_train, y_train)
     print("[INFO] Model training complete.")
     print(f"       Coefficients : brightness={model.coef_[0]:.4f}, edges={model.coef_[1]:.4f}")
     print(f"       Intercept    : {model.intercept_:.4f}")
 
-    # Predict on test set
     y_pred = model.predict(X_test)
 
-    # Evaluation metrics
     mse = mean_squared_error(y_test, y_pred)
     r2  = r2_score(y_test, y_pred)
     print(f"       MSE (test)   : {mse:.4f}")
@@ -147,13 +141,16 @@ def add_predictions(df, model):
 def plot_results(df, y_test, y_pred):
     """Generate two plots: Actual vs Predicted, and Brightness vs Price."""
 
-    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+    mse = mean_squared_error(y_test, y_pred)
+    r2  = r2_score(y_test, y_pred)
+    mae = np.mean(np.abs(y_test - y_pred))
+
+    fig, axes = plt.subplots(1, 2, figsize=(13, 6))
     fig.suptitle("Image Feature-Based Prediction using Linear Regression", fontsize=14)
 
     # --- Plot 1: Actual vs Predicted values ---
     ax1 = axes[0]
     ax1.scatter(y_test, y_pred, color='steelblue', edgecolors='black', s=80, label='Predictions')
-    # Perfect prediction line
     min_val = min(y_test.min(), y_pred.min())
     max_val = max(y_test.max(), y_pred.max())
     ax1.plot([min_val, max_val], [min_val, max_val], 'r--', linewidth=1.5, label='Ideal fit')
@@ -175,7 +172,17 @@ def plot_results(df, y_test, y_pred):
     ax2.legend()
     ax2.grid(True, linestyle='--', alpha=0.5)
 
-    plt.tight_layout()
+    # --- Metrics bar below both plots ---
+    metrics_text = (
+        f"  R² Score : {r2:.4f}     |     "
+        f"Test Samples : {len(y_test)}     |     "
+        f"Total Images : {len(df)}"
+    )
+    fig.text(0.5, 0.01, metrics_text, ha='center', fontsize=10,
+             color='white',
+             bbox=dict(boxstyle='round,pad=0.5', facecolor='#1a237e', edgecolor='#3949ab'))
+
+    plt.tight_layout(rect=[0, 0.06, 1, 1])
     plt.savefig("output_plots.png", dpi=150)
     print("[INFO] Plots saved as 'output_plots.png'")
     plt.show()
@@ -191,8 +198,6 @@ def show_sample_image(images):
 
     filename, img = images[0]
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    # OpenCV loads as BGR; convert to RGB for Matplotlib display
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     fig, axes = plt.subplots(1, 2, figsize=(10, 4))
@@ -212,18 +217,18 @@ def show_sample_image(images):
     plt.show()
 
 
-# ─────────────────────────────────────────────
+
 # MAIN — ties everything together
-# ─────────────────────────────────────────────
+
 def main():
     print("=" * 60)
     print("  Image Feature-Based Prediction using Linear Regression")
     print("=" * 60)
 
-    # 1. Load images
+    # 1. Load images from the images/ folder
     images = load_images("images")
     if not images:
-        print("[ERROR] No images found. Add .jpg/.png files to the 'images' folder and re-run.")
+        print("[ERROR] No images found. Please run generate_sample_images.py first.")
         return
 
     # 2. Show sample image (before/after grayscale)

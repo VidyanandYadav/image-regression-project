@@ -1,10 +1,4 @@
 """
-generate_sample_images.py
-─────────────────────────
-Utility script: generates 10 synthetic test images and saves them
-to the 'images/' folder so you can run main.py without needing
-real photos.
-
 Run this ONCE before running main.py:
     python generate_sample_images.py
 """
@@ -17,7 +11,7 @@ os.makedirs("images", exist_ok=True)
 
 np.random.seed(42)
 
-for i in range(1, 11):
+for i in range(1, 31):
     # Random 200x200 image with varying brightness
     brightness_base = np.random.randint(50, 220)
     img = np.full((200, 200, 3), brightness_base, dtype=np.uint8)
@@ -41,5 +35,5 @@ for i in range(1, 11):
     cv2.imwrite(filename, img)
     print(f"[CREATED] {filename}")
 
-print("\n[DONE] 10 sample images created in 'images/' folder.")
+print("\n[DONE] 30 sample images created in 'images/' folder.")
 print("       Now run: python main.py")
